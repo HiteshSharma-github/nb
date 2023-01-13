@@ -19,7 +19,7 @@ const transporter = nodemailer.createTransport(sendgridTransport({
     }
 }))
 */
-router.post('/signup',(req,res)=>{
+router.post('/signup',async(req,res)=>{   //controller  //3 parameters  //middleware to features --right way ,node-4 threads,django,php,java- multi thread single main thread
   const {name,email,password,pic} = req.body 
   if(!email || !password || !name){
      return res.status(422).json({error:"please add all the fields"})
@@ -39,7 +39,7 @@ router.post('/signup',(req,res)=>{
             })
     
             user.save()
-            .then(user=>{
+            .then(user=>{ 
                 /*
                 transporter.sendMail({
                     to:user.email,
@@ -56,45 +56,51 @@ router.post('/signup',(req,res)=>{
       })
      
   })
-  .catch(err=>{
-    console.log(err)
-  })
+  
+//   .catch(err=>{
+//     console.log(err)
+
+ // })
 })
 
-
-router.post('/signin',(req,res)=>{
+// bodyparser-- might be// frontend se json
+router.post('/signin',async(req,res)=>{
+    try{
     const {email,password} = req.body
     if(!email || !password){
        return res.status(422).json({error:"please add email or password"})
     }
     User.findOne({email:email})
-    .then(savedUser=>{
+    .then(savedUser=>{   // .then mai .then must have output
         if(!savedUser){
            return res.status(422).json({error:"Invalid Email or password"})
         }
-        bcrypt.compare(password,savedUser.password)
-        .then(doMatch=>{
+        else{
+        var doMatch=bcrypt.compare(password,savedUser.password) //sync is not good,here using sync  node.j has main thread, django has individual 
             if(doMatch){
                const token = jwt.sign({_id:savedUser._id},JWT_SECRET)
                const {_id,name,email,followers,following,pic} = savedUser
-               res.json({token,user:{_id,name,email,followers,following,pic}})
-               res.json({message:"successfully signed in"})
+               //res.json({token,user:{_id,name,email,followers,following,pic}})
+               res.json({token,user:{_id,name,email,followers,following,pic},message:"successfully signed in"})
                
              //  send token first otherwise will show error
             }
             else{
                 return res.status(422).json({error:"Invalid Email or password"})
             }
+        }
+            
         })
-        .catch(err=>{
-            console.log(err)
-        })
+    }
+    catch(err){
+        console.log(err)
+    }   
     })
-})
 
 
 
-router.post('/reset-password',(req,res)=>{
+
+router.post('/reset-password',async(req,res)=>{
      crypto.randomBytes(32,(err,buffer)=>{
          if(err){
              console.log(err)
@@ -154,7 +160,7 @@ router.post('/reset-password',(req,res)=>{
 })
 
 
-router.post('/new-password',(req,res)=>{
+router.post('/new-password',async(req,res)=>{
     const newPassword = req.body.password
     const sentToken = req.body.token
     User.findOne({resetToken:sentToken,expireToken:{$gt:Date.now()}})
